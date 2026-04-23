@@ -1,13 +1,20 @@
 package com.example.integracinmultimediaybiometrica
 
-import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricPrompt
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -19,9 +26,26 @@ class MainActivity : AppCompatActivity() {
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
 
+    private lateinit var layoutLock: View
+    private lateinit var layoutCamera: View
     private lateinit var btnLogin: Button
     private lateinit var btnPinManual: Button
+    private lateinit var btnStopCamera: Button
     private lateinit var tvErrorMessage: TextView
+    private lateinit var viewFinder: PreviewView
+
+    private var cameraProvider: ProcessCameraProvider? = null
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            startCamera()
+        } else {
+            Toast.makeText(this, "Permiso de cámara denegado", Toast.LENGTH_SHORT).show()
+            showLockScreen()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,15 +60,22 @@ class MainActivity : AppCompatActivity() {
         }
         
         btnPinManual.setOnClickListener {
-            // Simulación de entrada de PIN manual
-            navigateToCamera()
+            onAuthSuccess()
+        }
+
+        btnStopCamera.setOnClickListener {
+            stopCamera()
         }
     }
 
     private fun setupViews() {
+        layoutLock = findViewById(R.id.layoutLock)
+        layoutCamera = findViewById(R.id.layoutCamera)
         btnLogin = findViewById(R.id.btnLogin)
         btnPinManual = findViewById(R.id.btnPinManual)
+        btnStopCamera = findViewById(R.id.btnStopCamera)
         tvErrorMessage = findViewById(R.id.tvErrorMessage)
+        viewFinder = findViewById(R.id.viewFinder)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -60,13 +91,13 @@ class MainActivity : AppCompatActivity() {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
-                    showError("Autenticación cancelada o no disponible")
+                    showError("Autenticación cancelada")
                     showManualPinOption()
                 }
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    navigateToCamera()
+                    onAuthSuccess()
                 }
 
                 override fun onAuthenticationFailed() {
@@ -82,6 +113,56 @@ class MainActivity : AppCompatActivity() {
             .build()
     }
 
+    private fun onAuthSuccess() {
+        layoutLock.visibility = View.GONE
+        layoutCamera.visibility = View.VISIBLE
+        checkCameraPermission()
+    }
+
+    private fun checkCameraPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
+            == PackageManager.PERMISSION_GRANTED) {
+            startCamera()
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
+        cameraProviderFuture.addListener({
+            cameraProvider = cameraProviderFuture.get()
+
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.surfaceProvider = viewFinder.surfaceProvider
+                }
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                cameraProvider?.unbindAll()
+                cameraProvider?.bindToLifecycle(this, cameraSelector, preview)
+            } catch (exc: Exception) {
+                showError("Error al iniciar cámara")
+            }
+
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun stopCamera() {
+        cameraProvider?.unbindAll()
+        showLockScreen()
+    }
+
+    private fun showLockScreen() {
+        layoutCamera.visibility = View.GONE
+        layoutLock.visibility = View.VISIBLE
+        tvErrorMessage.visibility = View.GONE
+    }
+
     private fun showError(message: String) {
         tvErrorMessage.text = message
         tvErrorMessage.visibility = View.VISIBLE
@@ -89,11 +170,5 @@ class MainActivity : AppCompatActivity() {
 
     private fun showManualPinOption() {
         btnPinManual.visibility = View.VISIBLE
-    }
-
-    private fun navigateToCamera() {
-        val intent = Intent(this, CameraActivity::class.java)
-        startActivity(intent)
-        finish()
     }
 }
