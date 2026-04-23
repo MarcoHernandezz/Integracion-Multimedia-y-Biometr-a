@@ -95,17 +95,30 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSwitchCamera"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Cambiar Cámara"
+            android:textAllCaps="false"
+            app:icon="@android:drawable/ic_menu_rotate"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardCamera" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStopCamera"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="16dp"
             android:text="Cerrar Sesión / Apagar Cámara"
             android:textColor="#FF8A80"
             app:strokeColor="#FF8A80"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/cardCamera" />
+            app:layout_constraintTop_toBottomOf="@id/btnSwitchCamera" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -32,11 +32,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutCamera: View
     private lateinit var btnLogin: Button
     private lateinit var btnPinManual: Button
+    private lateinit var btnSwitchCamera: Button
     private lateinit var btnStopCamera: Button
     private lateinit var tvErrorMessage: TextView
     private lateinit var viewFinder: PreviewView
 
     private var cameraProvider: ProcessCameraProvider? = null
+    private var currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -62,8 +64,11 @@ class MainActivity : AppCompatActivity() {
         }
         
         btnPinManual.setOnClickListener {
-            // Dispara específicamente la autenticación por credenciales del sistema (PIN/Patrón)
             biometricPrompt.authenticate(promptInfo)
+        }
+
+        btnSwitchCamera.setOnClickListener {
+            toggleCamera()
         }
 
         btnStopCamera.setOnClickListener {
@@ -76,6 +81,7 @@ class MainActivity : AppCompatActivity() {
         layoutCamera = findViewById(R.id.layoutCamera)
         btnLogin = findViewById(R.id.btnLogin)
         btnPinManual = findViewById(R.id.btnPinManual)
+        btnSwitchCamera = findViewById(R.id.btnSwitchCamera)
         btnStopCamera = findViewById(R.id.btnStopCamera)
         tvErrorMessage = findViewById(R.id.tvErrorMessage)
         viewFinder = findViewById(R.id.viewFinder)
@@ -94,29 +100,24 @@ class MainActivity : AppCompatActivity() {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
-                    // Manejo de sensor sucio, cancelaciones, etc.
                     showError("Autenticación interrumpida: $errString")
                     showManualPinOption()
                 }
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    // Solo si el resultado es positivo se permite el paso
                     onAuthSuccess()
                 }
 
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
-                    // Fallos repetidos (ej. huella no reconocida)
                     showError("Intento fallido. Verifique su identidad.")
                 }
             })
 
-        // Configuración para permitir Biometría Fuerte O Credenciales del Dispositivo (PIN, Patrón, Contraseña)
         promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Autenticación de Seguridad")
             .setSubtitle("Identifíquese para acceder a la terminal")
-            // Al usar DEVICE_CREDENTIAL, no se puede usar setNegativeButtonText
             .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
             .build()
     }
@@ -125,6 +126,15 @@ class MainActivity : AppCompatActivity() {
         layoutLock.visibility = View.GONE
         layoutCamera.visibility = View.VISIBLE
         checkCameraPermission()
+    }
+
+    private fun toggleCamera() {
+        currentCameraSelector = if (currentCameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+            CameraSelector.DEFAULT_FRONT_CAMERA
+        } else {
+            CameraSelector.DEFAULT_BACK_CAMERA
+        }
+        startCamera() // Reinicia con el nuevo selector
     }
 
     private fun checkCameraPermission() {
@@ -148,13 +158,13 @@ class MainActivity : AppCompatActivity() {
                     it.surfaceProvider = viewFinder.surfaceProvider
                 }
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
             try {
+                // Desvincular todo antes de volver a vincular
                 cameraProvider?.unbindAll()
-                cameraProvider?.bindToLifecycle(this, cameraSelector, preview)
+                // Vincular al ciclo de vida de la actividad (this)
+                cameraProvider?.bindToLifecycle(this, currentCameraSelector, preview)
             } catch (exc: Exception) {
-                showError("Error al iniciar cámara")
+                showError("Error al conectar lente: ${exc.message}")
             }
 
         }, ContextCompat.getMainExecutor(this))
@@ -162,6 +172,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun stopCamera() {
         cameraProvider?.unbindAll()
+        currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA // Reset a trasera
         showLockScreen()
     }
 
