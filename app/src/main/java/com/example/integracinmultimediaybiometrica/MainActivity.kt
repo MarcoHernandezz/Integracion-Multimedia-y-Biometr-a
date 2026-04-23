@@ -10,6 +10,8 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
@@ -60,7 +62,8 @@ class MainActivity : AppCompatActivity() {
         }
         
         btnPinManual.setOnClickListener {
-            onAuthSuccess()
+            // Dispara específicamente la autenticación por credenciales del sistema (PIN/Patrón)
+            biometricPrompt.authenticate(promptInfo)
         }
 
         btnStopCamera.setOnClickListener {
@@ -91,25 +94,30 @@ class MainActivity : AppCompatActivity() {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
-                    showError("Autenticación cancelada")
+                    // Manejo de sensor sucio, cancelaciones, etc.
+                    showError("Autenticación interrumpida: $errString")
                     showManualPinOption()
                 }
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
+                    // Solo si el resultado es positivo se permite el paso
                     onAuthSuccess()
                 }
 
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
-                    showError("Intento fallido")
+                    // Fallos repetidos (ej. huella no reconocida)
+                    showError("Intento fallido. Verifique su identidad.")
                 }
             })
 
+        // Configuración para permitir Biometría Fuerte O Credenciales del Dispositivo (PIN, Patrón, Contraseña)
         promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Autenticación de Seguridad")
             .setSubtitle("Identifíquese para acceder a la terminal")
-            .setNegativeButtonText("Cancelar")
+            // Al usar DEVICE_CREDENTIAL, no se puede usar setNegativeButtonText
+            .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
             .build()
     }
 
