@@ -94,18 +94,45 @@
                 android:layout_height="match_parent" />
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Botón de Captura Central -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btnCapture"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:contentDescription="Capturar Identidad"
+            app:backgroundTint="@color/primary"
+            app:fabCustomSize="72dp"
+            app:maxImageSize="40dp"
+            app:srcCompat="@android:drawable/ic_menu_camera"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardCamera" />
+
+        <TextView
+            android:id="@+id/tvCaptureHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Capturar Identidad"
+            android:textColor="@color/onBackground"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="@id/btnCapture"
+            app:layout_constraintStart_toStartOf="@id/btnCapture"
+            app:layout_constraintTop_toBottomOf="@id/btnCapture" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSwitchCamera"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="32dp"
             android:text="Cambiar Cámara"
             android:textAllCaps="false"
             app:icon="@android:drawable/ic_menu_rotate"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/cardCamera" />
+            app:layout_constraintTop_toBottomOf="@id/tvCaptureHint" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStopCamera"
