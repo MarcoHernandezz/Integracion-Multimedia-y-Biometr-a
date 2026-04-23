@@ -1,8 +1,6 @@
 package com.example.integracinmultimediaybiometrica
 
 import android.Manifest
-import android.app.KeyguardManager
-import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -48,20 +46,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvErrorMessage: TextView
     private lateinit var viewFinder: PreviewView
 
+    // Teclado Custom Views
+    private lateinit var layoutCustomKeyboard: View
+    private lateinit var tvPinDisplay: TextView
+    private lateinit var btnKeyDone: Button
+    private lateinit var btnKeyDelete: Button
+    
+    private var currentPin = ""
+
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-    // Launcher para la autenticación fallback por PIN del sistema
-    private val deviceCredentialLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            onAuthSuccess()
-        } else {
-            showError("Autenticación por PIN fallida o cancelada")
-        }
-    }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -81,13 +76,14 @@ class MainActivity : AppCompatActivity() {
         
         setupViews()
         setupBiometrics()
+        setupCustomKeyboard()
         
         btnLogin.setOnClickListener {
             biometricPrompt.authenticate(promptInfo)
         }
         
         btnPinManual.setOnClickListener {
-            launchDeviceCredentialFallback()
+            showCustomKeyboard()
         }
 
         btnSwitchCamera.setOnClickListener {
@@ -121,6 +117,48 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupCustomKeyboard() {
+        layoutCustomKeyboard = findViewById(R.id.layoutCustomKeyboard)
+        tvPinDisplay = findViewById(R.id.tvPinDisplay)
+        btnKeyDone = findViewById(R.id.btnKeyDone)
+        btnKeyDelete = findViewById(R.id.btnKeyDelete)
+
+        btnKeyDone.setOnClickListener {
+            if (currentPin.isNotEmpty()) {
+                onAuthSuccess()
+            }
+        }
+
+        btnKeyDelete.setOnClickListener {
+            if (currentPin.isNotEmpty()) {
+                currentPin = currentPin.dropLast(1)
+                updatePinDisplay()
+            }
+        }
+    }
+
+    // Método invocado por android:onClick="onKeyClick" en el XML
+    fun onKeyClick(view: View) {
+        if (view is Button) {
+            if (currentPin.length < 8) { // Límite razonable
+                currentPin += view.text.toString()
+                updatePinDisplay()
+            }
+        }
+    }
+
+    private fun updatePinDisplay() {
+        tvPinDisplay.text = "*".repeat(currentPin.length)
+    }
+
+    private fun showCustomKeyboard() {
+        currentPin = ""
+        updatePinDisplay()
+        layoutCustomKeyboard.visibility = View.VISIBLE
+        btnLogin.visibility = View.GONE
+        btnPinManual.visibility = View.GONE
+    }
+
     private fun setupBiometrics() {
         executor = ContextCompat.getMainExecutor(this)
         
@@ -128,7 +166,7 @@ class MainActivity : AppCompatActivity() {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
-                    showError("Error: $errString")
+                    showError("Biometría no disponible")
                     showManualPinOption()
                 }
 
@@ -139,11 +177,10 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
-                    showError("Huella no reconocida. Intente de nuevo.")
+                    showError("Huella no reconocida.")
                 }
             })
 
-        // Configuración para permitir Biometría y Credenciales del Dispositivo (PIN/Patrón)
         promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Autenticación de Seguridad")
             .setSubtitle("Identifíquese para acceder a la terminal")
@@ -151,28 +188,10 @@ class MainActivity : AppCompatActivity() {
             .build()
     }
 
-    /**
-     * Lanza el flujo de PIN/Patrón del sistema como alternativa robusta.
-     * Esto asegura que el teclado numérico o el patrón se desplieguen correctamente
-     * usando la interfaz nativa del sistema operativo.
-     */
-    private fun launchDeviceCredentialFallback() {
-        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-        val intent = keyguardManager.createConfirmDeviceCredentialIntent(
-            "Autenticación Requerida",
-            "Por favor, ingrese su PIN o Patrón de seguridad"
-        )
-        if (intent != null) {
-            deviceCredentialLauncher.launch(intent)
-        } else {
-            // Si no hay PIN configurado en el dispositivo
-            showError("No hay un PIN o Patrón configurado en este dispositivo.")
-        }
-    }
-
     private fun onAuthSuccess() {
         layoutLock.visibility = View.GONE
         layoutCamera.visibility = View.VISIBLE
+        layoutCustomKeyboard.visibility = View.GONE
         checkCameraPermission()
     }
 
@@ -214,7 +233,7 @@ class MainActivity : AppCompatActivity() {
                     this, currentCameraSelector, preview, imageCapture
                 )
             } catch (exc: Exception) {
-                showError("Error al conectar lente: ${exc.message}")
+                showError("Error al conectar lente")
             }
 
         }, ContextCompat.getMainExecutor(this))
@@ -235,7 +254,7 @@ class MainActivity : AppCompatActivity() {
             executor,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
-                    showError("Error al capturar: ${exc.message}")
+                    showError("Error al capturar")
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
@@ -250,7 +269,7 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             AlertDialog.Builder(this)
                 .setTitle("Validación de Identidad")
-                .setMessage("Foto capturada con éxito para validación.")
+                .setMessage("Foto capturada con éxito.")
                 .setPositiveButton("Finalizar") { dialog, _ ->
                     dialog.dismiss()
                     stopCamera()
@@ -269,6 +288,8 @@ class MainActivity : AppCompatActivity() {
     private fun showLockScreen() {
         layoutCamera.visibility = View.GONE
         layoutLock.visibility = View.VISIBLE
+        layoutCustomKeyboard.visibility = View.GONE
+        btnLogin.visibility = View.VISIBLE
         tvErrorMessage.visibility = View.GONE
     }
 
