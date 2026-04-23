@@ -2,4 +2,20 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Palette: Dark & Minimalist -->
+    <color name="primary">#E1E2E1</color>
+    <color name="onPrimary">#333333</color>
+    <color name="primaryContainer">#444444</color>
+    <color name="onPrimaryContainer">#F5F5F5</color>
+
+    <color name="secondary">#9E9E9E</color>
+    <color name="onSecondary">#121212</color>
+
+    <color name="background">#121212</color>
+    <color name="onBackground">#E1E2E1</color>
+    <color name="surface">#1E1E1E</color>
+    <color name="onSurface">#E1E2E1</color>
+
+    <color name="outline">#757575</color>
 </resources>

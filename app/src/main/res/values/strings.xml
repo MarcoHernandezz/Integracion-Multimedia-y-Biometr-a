@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Integración multimedia y biometrica</string>
+    <string name="login_button_text">Iniciar Sesión</string>
+    <string name="error_placeholder"></string>
 </resources>
